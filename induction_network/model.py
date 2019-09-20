@@ -5,7 +5,7 @@ prototypical network model for few shot learning
 import tensorflow as tf
 
 
-class PrototypicalModel(object):
+class InductionModel(object):
     def __init__(self, config, vocab_size, word_vectors):
         self.config = config
         self.vocab_size = vocab_size
