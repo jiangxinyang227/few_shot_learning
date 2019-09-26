@@ -15,7 +15,7 @@ import numpy as np
 
 
 class RelationData(object):
-    def __init__(self, output_path: str, sequence_length: int = 200, num_classes: int = 3, num_support: int = 5,
+    def __init__(self, output_path: str, sequence_length: int = 100, num_classes: int = 3, num_support: int = 5,
                  num_queries: int = 50, num_tasks: int = 1000, num_eval_tasks: int = 100,
                  stop_word_path: Optional[str] = None,
                  embedding_size: Optional[int] = None, low_freq: int = 5,
@@ -62,22 +62,22 @@ class RelationData(object):
         :param data_path:
         :return: dict. {class_name: {sentiment: [[]], }, ...}
         """
-        category_dirs = os.listdir(data_path)
+        category_files = os.listdir(data_path)
         categories_data = {}
-        # foreach all product review dir
-        for category_dir in category_dirs:
-            file_dirs = os.path.join(data_path, category_dir)
-            # fetch five sentiment reviews for each product
-            sentiment_files = os.listdir(file_dirs)
-            sentiment_data = {}  # save review for each product, [[], [], [], [], []]
-            for file in sentiment_files:
-                prefix = os.path.splitext(file)[0]
-                file_path = os.path.join(file_dirs, file)
-                with open(file_path, "r") as fr:
-                    data = [line.strip().split() for line in fr.readlines()]
-                sentiment_data[prefix] = data
-            categories_data[category_dir] = sentiment_data
-
+        for category_file in category_files:
+            file_path = os.path.join(data_path, category_file)
+            sentiment_data = {}
+            with open(file_path, "r", encoding="utf8") as fr:
+                for line in fr.readlines():
+                    content, label = line.strip().split("\t")
+                    if sentiment_data.get(label, None):
+                        sentiment_data[label].append(content.split(" "))
+                    else:
+                        sentiment_data[label] = [content.split(" ")]
+            print("task name: ", category_file)
+            print("pos samples length: ", len(sentiment_data["1"]))
+            print("neg samples length: ", len(sentiment_data["-1"]))
+            categories_data[category_file] = sentiment_data
         return categories_data
 
     def remove_stop_word(self, data: Dict[str, Dict[str, List[List[str]]]]) -> List[str]:
@@ -169,21 +169,43 @@ class RelationData(object):
                     for category, category_data in data.items()}
         return data_ids
 
-    def choice_support_query(self, category_data: List[List[int]]) -> Tuple[List[List[int]], List[List[int]]]:
+    def choice_support_query(self, task_data: Dict[str, List[List[int]]])\
+            -> Tuple[List[List[List[int]]], List[List[int]], List[int]]:
         """
-        selecting support data and query data form all data for a category
-        :param category_data: all data for a category
+        randomly selecting support set, query set form a task.
+        :param task_data: all data for a task
         :return:
         """
-        support_data = random.sample(category_data, self.__num_support)
-        other_data = copy.copy(category_data)
-        [other_data.remove(data) for data in support_data]
-        query_data = random.sample(other_data, self.__num_queries)
+        label_to_index = {"1": 0, "-1": 1}
+        if self.__is_training:
+            with open(os.path.join(self.__output_path, "label_to_index.json"), "w") as f:
+                json.dump(label_to_index, f)
+
+        pos_samples = task_data["1"]
+        neg_samples = task_data["-1"]
+        pos_support = random.sample(pos_samples, self.__num_support)
+        neg_support = random.sample(neg_samples, self.__num_support)
+
+        pos_others = copy.copy(pos_samples)
+        [pos_others.remove(data) for data in pos_support]
+
+        neg_others = copy.copy(neg_samples)
+        [neg_others.remove(data) for data in neg_support]
+
+        pos_query = random.sample(pos_others, self.__num_queries)
+        neg_query = random.sample(neg_others, self.__num_queries)
 
         # padding
-        support_data = self.padding(support_data)
-        query_data = self.padding(query_data)
-        return support_data, query_data
+        pos_support = self.padding(pos_support)
+        neg_support = self.padding(neg_support)
+        pos_query = self.padding(pos_query)
+        neg_query = self.padding(neg_query)
+
+        support_set = [pos_support, neg_support]  # [num_classes, num_support, sequence_length]
+        query_set = pos_query + neg_query  # [num_classes * num_queries, sequence_length]
+        labels = [label_to_index["1"]] * len(pos_query) + [label_to_index["-1"]] * len(neg_query)
+
+        return support_set, query_set, labels
 
     def samples(self, data_ids: Dict[str, Dict[str, List[List[int]]]]) \
             -> List[Dict[str, Union[List[List[List[int]]], List[List[int]], List[int]]]]:
@@ -192,11 +214,6 @@ class RelationData(object):
         :param data_ids:
         :return:
         """
-        if self.__is_training:
-            label_to_index = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4}
-            with open(os.path.join(self.__output_path, "label_to_index.json"), "w") as f:
-                json.dump(label_to_index, f)
-
         # product name list
         category_list = list(data_ids.keys())
 
@@ -208,15 +225,7 @@ class RelationData(object):
         for i in range(num_tasks):
             # randomly choice a category to construct train sample
             support_category = random.choice(category_list)
-            support_set = []  # [num_classes, num_support, sequence_length]
-            query_set = []  # [num_classes * num_queries, sequence_length]
-            labels = []
-            for idx, sentiment in data_ids[support_category].items():
-                support_data, query_data = self.choice_support_query(sentiment)
-                label = [int(idx) - 1] * len(query_data)
-                support_set.append(support_data)
-                query_set.extend(query_data)
-                labels.extend(label)
+            support_set, query_set, labels = self.choice_support_query(data_ids[support_category])
             tasks.append(dict(support=support_set, queries=query_set, labels=labels))
         return tasks
 
@@ -252,6 +261,7 @@ class RelationData(object):
         :param data_ids:
         :return:
         """
+
         tasks = self.samples(data_ids)
 
         for task in tasks:

@@ -35,7 +35,7 @@ class RelationModel(object):
                                           name="embedding_w")
             else:
                 embedding_w = tf.get_variable("embedding_w", shape=[self.vocab_size, self.config["embedding_size"]],
-                                              initializer=tf.contrib.layers.xavier_initializer())
+                                              initializer=tf.random_normal_initializer())
 
             # support embedding. dimension: [num_classes, num_support, sequence_length, embedding_size]
             support_embedded = tf.nn.embedding_lookup(embedding_w, self.support, name="support_embedded")
