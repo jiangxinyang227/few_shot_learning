@@ -120,7 +120,7 @@ class RelationModel(object):
         layer_size = self.config["layer_size"]
 
         M = tf.get_variable("M", [encode_size, encode_size, layer_size], dtype=tf.float32,
-                            initializer=tf.glorot_normal_initializer())
+                            initializer=tf.truncated_normal_initializer(stddev=(2 / encode_size) ** 0.5))
         all_mid = []
         for i in range(layer_size):
             # [num_classes, num_classes * num_queries]
@@ -150,7 +150,7 @@ class RelationModel(object):
             hidden_size = self.config["hidden_sizes"][-1] * 2
             attention_size = self.config["attention_size"]
             w_1 = tf.get_variable("w_1", shape=[hidden_size, attention_size],
-                                  initializer=tf.contrib.layers.xavier_initializer())
+                                  initializer=tf.glorot_normal_initializer)
 
             w_2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
 

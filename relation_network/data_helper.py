@@ -15,7 +15,7 @@ import numpy as np
 
 
 class RelationData(object):
-    def __init__(self, output_path: str, sequence_length: int = 100, num_classes: int = 3, num_support: int = 5,
+    def __init__(self, output_path: str, sequence_length: int = 100, num_classes: int = 2, num_support: int = 5,
                  num_queries: int = 50, num_tasks: int = 1000, num_eval_tasks: int = 100,
                  stop_word_path: Optional[str] = None,
                  embedding_size: Optional[int] = None, low_freq: int = 5,
@@ -54,6 +54,9 @@ class RelationData(object):
         self.vocab_size = None
         self.word_vectors = None
         self.current_category_index = 0  # record current sample category
+
+        print("stop word path: ", self.__stop_word_path)
+        print("word vector path: ", self.__word_vector_path)
 
     @staticmethod
     def load_data(data_path: str) -> Dict[str, Dict[str, List[List[str]]]]:
@@ -110,20 +113,36 @@ class RelationData(object):
         :param vocab: vocab
         :return:
         """
-        pad_vector = np.zeros(self.__embedding_size)  # set the "<PAD>" vector to 0
+        pad_vector = np.zeros(self.__embedding_size)  # set the "<pad>" vector to 0
         word_vectors = (1 / np.sqrt(len(vocab) - 1) * (2 * np.random.rand(len(vocab) - 1, self.__embedding_size) - 1))
-        if os.path.splitext(self.__word_vector_path)[-1] == ".bin":
-            word_vec = gensim.models.KeyedVectors.load_word2vec_format(self.__word_vector_path, binary=True)
-        else:
-            word_vec = gensim.models.KeyedVectors.load_word2vec_format(self.__word_vector_path)
+        word_vectors = np.vstack((pad_vector, word_vectors))
+
+        # load glove vectors
+        glove_vector = {}
+        with open(self.__word_vector_path, "r", encoding="utf8") as fr:
+            for line in fr.readlines():
+                line_list = line.strip().split(" ")
+                glove_vector[line_list[0]] = line_list[1:]
 
         for i in range(1, len(vocab)):
-            try:
-                vector = word_vec.wv[vocab[i]]
-                word_vectors[i, :] = vector
-            except:
+            if glove_vector.get(vocab[i], None):
+                word_vectors[i, :] = glove_vector[vocab[i]]
+            else:
                 print(vocab[i] + "not exist word vector file")
-        word_vectors = np.vstack((pad_vector, word_vectors))
+
+        # # load gensim word2vec vectors
+        # if os.path.splitext(self.__word_vector_path)[-1] == ".bin":
+        #     word_vec = gensim.models.KeyedVectors.load_word2vec_format(self.__word_vector_path, binary=True)
+        # else:
+        #     word_vec = gensim.models.KeyedVectors.load_word2vec_format(self.__word_vector_path)
+        #
+        # for i in range(1, len(vocab)):
+        #     try:
+        #         vector = word_vec.wv[vocab[i]]
+        #         word_vectors[i, :] = vector
+        #     except:
+        #         print(vocab[i] + "not exist word vector file")
+
         return word_vectors
 
     def gen_vocab(self, words: List[str]) -> Dict[str, int]:
@@ -133,7 +152,7 @@ class RelationData(object):
         :return:
         """
         if self.__is_training:
-            vocab = ["<PAD>", "<UNK>"] + words
+            vocab = ["<pad>", "<unk>"] + words
 
             self.vocab_size = len(vocab)
 
@@ -163,7 +182,7 @@ class RelationData(object):
         :param word_to_index:
         :return: {class_name: [[], [], ], ..}
         """
-        data_ids = {category: {sentiment: [[word_to_index.get(token, word_to_index["<UNK>"]) for token in line]
+        data_ids = {category: {sentiment: [[word_to_index.get(token, word_to_index["<unk>"]) for token in line]
                                            for line in sentiment_data]
                                for sentiment, sentiment_data in category_data.items()}
                     for category, category_data in data.items()}
