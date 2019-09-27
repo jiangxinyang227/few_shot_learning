@@ -134,7 +134,7 @@ class PrototypicalModel(object):
             hidden_size = self.config["hidden_sizes"][-1] * 2
             attention_size = self.config["attention_size"]
             w_1 = tf.get_variable("w_1", shape=[hidden_size, attention_size],
-                                  initializer=tf.contrib.layers.xavier_initializer())
+                                  initializer=tf.glorot_normal_initializer)
 
             w_2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
 
