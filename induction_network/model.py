@@ -167,7 +167,7 @@ class InductionModel(object):
         layer_size = self.config["layer_size"]
 
         M = tf.get_variable("M", [encode_size, encode_size, layer_size], dtype=tf.float32,
-                            initializer=tf.glorot_normal_initializer())
+                            initializer=tf.truncated_normal_initializer(stddev=(2 / encode_size) ** 0.5))
         all_mid = []
         for i in range(layer_size):
             # [num_classes, num_classes * num_queries]
@@ -197,7 +197,7 @@ class InductionModel(object):
             hidden_size = self.config["hidden_sizes"][-1] * 2
             attention_size = self.config["attention_size"]
             w_1 = tf.get_variable("w_1", shape=[hidden_size, attention_size],
-                                  initializer=tf.contrib.layers.xavier_initializer())
+                                  initializer=tf.glorot_normal_initializer)
 
             w_2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
 
@@ -212,8 +212,6 @@ class InductionModel(object):
             alpha = tf.nn.softmax(weights, axis=-1)
 
             # calculate weighted sum
-            # r = tf.matmul(tf.transpose(H, [0, 2, 1]), tf.reshape(alpha, [-1, self.config["sequence_length"], 1]))
-            # print(r)
             output = tf.reduce_sum(H * tf.reshape(alpha, [-1, self.config["sequence_length"], 1]), axis=1)
 
             return output

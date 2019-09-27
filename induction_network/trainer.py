@@ -29,10 +29,16 @@ class InductionTrainer(object):
         init data object
         :return:
         """
-        data_obj = InductionData(self.config["output_path"], sequence_length=self.config["sequence_length"],
-                                 num_classes=self.config["num_classes"], num_support=self.config["num_support"],
-                                 num_queries=self.config["num_queries"], num_tasks=self.config["num_tasks"],
+        data_obj = InductionData(output_path=self.config["output_path"],
+                                 sequence_length=self.config["sequence_length"],
+                                 num_classes=self.config["num_classes"],
+                                 num_support=self.config["num_support"],
+                                 num_queries=self.config["num_queries"],
+                                 num_tasks=self.config["num_tasks"],
                                  num_eval_tasks=self.config["num_eval_tasks"],
+                                 embedding_size=self.config["embedding_size"],
+                                 stop_word_path=self.config["stop_word_path"],
+                                 word_vector_path=self.config["word_vector_path"],
                                  is_training=is_training)
         return data_obj
 

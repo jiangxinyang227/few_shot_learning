@@ -5,7 +5,7 @@
   "eval_every": 500,
   "learning_rate": 1e-3,
   "optimization": "adam",
-  "embedding_size": 100,
+  "embedding_size": 300,
   "hidden_sizes": [128],
   "attention_size": 64,
   "layer_size": 100,
@@ -21,9 +21,9 @@
   "max_grad_norm": 3.0,
   "train_data": "../reviews/train",
   "eval_data": "../reviews/eval",
-  "stop_word": "../reviews/english",
+  "stop_word_path": "../reviews/english",
   "output_path": "output/induction",
-  "word_vectors_path": null,
+  "word_vector_path": "../word_embedded/glove.6B.300d.txt",
   "ckpt_model_path": "ckpt_model/induction",
   "pb_model_path": "pb_model/induction"
 }
