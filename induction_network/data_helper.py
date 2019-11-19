@@ -128,7 +128,7 @@ class InductionData(object):
             if glove_vector.get(vocab[i], None):
                 word_vectors[i, :] = glove_vector[vocab[i]]
             else:
-                print(vocab[i] + "not exist word vector file")
+                print(vocab[i] + " not exist word vector file")
 
         # # load gensim word2vec vectors
         # if os.path.splitext(self.__word_vector_path)[-1] == ".bin":
