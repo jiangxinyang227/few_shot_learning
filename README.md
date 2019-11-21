@@ -27,11 +27,6 @@
 #### word vector
 * using glove word vector, you need download 300 dim glove word vector and place it in word_embedded dir.
 
-#### result comparison
-    induction network: ≈0.8/acc
-    relation network: ≈0.78/acc
-    prototypical network: not convergence
-
 #### note
 * You can only use 2-way, and if you need to use other way, you can modify the data_helper.py file.
 * Shot should not be more than 10, because there are few comments under some categories. 
